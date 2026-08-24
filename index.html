@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет врача — МИС "МедСистема"</title>
+    <!-- Tailwind CSS (стили) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js (графики показателей) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons (иконки) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #printable-area, #printable-area * { visibility: visible; }
+            #printable-area { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Верхняя панель (Header) -->
+    <header class="bg-slate-900 text-white shadow-md no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i data-lucide="activity" class="text-blue-400 w-7 h-7"></i>
+                <span class="text-xl font-bold tracking-wide">МИС «МедСистема» <span class="text-xs bg-blue-600 px-2 py-0.5 rounded text-slate-100 font-normal">АРМ Врача</span></span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right text-xs">
+                    <p id="hdr-doctor-name" class="font-semibold text-sm">Д-р Иванов А. С.</p>
+                    <p id="hdr-doctor-spec" class="text-slate-400">Врач-хирург</p>
+                </div>
+                <button onclick="openModal('editDoctorModal')" title="Настроить профиль врача" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 max-w-7xl w-full mx-auto p-4 gap-6 flex flex-col md:flex-row">
+        
+        <!-- Левое меню (Sidebar) -->
+        <aside class="w-full md:w-64 bg-white rounded-xl shadow-sm border border-slate-200 p-4 shrink-0 no-print">
+            <nav class="space-y-1">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-blue-600 bg-blue-50">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span>Рабочий стол</span>
+                </button>
+                <button onclick="switchTab('patients')" id="nav-patients" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-slate-600 hover:bg-slate-50">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                    <span>Картотека пациентов</span>
+                </button>
+                <button onclick="switchTab('ward')" id="nav-ward" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition text-slate-600 hover:bg-slate-50">
+                    <i data-lucide="bed" class="w-5 h-5"></i>
+                    <span>Стационар / Палаты</span>
+                </button>
+            </nav>
+
+            <hr class="my-4 border-slate-200">
+
+            <div class="px-3">
+                <button onclick="openModal('addPatientModal')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center space-x-2 text-sm shadow transition">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    <span>Новый пациент</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Основной контент (Main Content Area) -->
+        <main class="flex-1 space-y-6">
+
+            <!-- Вкладка 1: Рабочий стол -->
+            <section id="tab-dashboard" class="tab-content space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-blue-50 rounded-lg text-blue-600"><i data-lucide="users" class="w-6 h-6"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase">Всего пациентов</p>
+                            <p id="stat-total" class="text-2xl font-bold text-slate-800">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-indigo-50 rounded-lg text-indigo-600"><i data-lucide="bed" class="w-6 h-6"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase">В стационаре</p>
+                            <p id="stat-inpatient" class="text-2xl font-bold text-slate-800">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-emerald-50 rounded-lg text-emerald-600"><i data-lucide="user-check" class="w-6 h-6"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase">Амбулаторно</p>
+                            <p id="stat-outpatient" class="text-2xl font-bold text-slate-800">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center space-x-2">
+                        <i data-lucide="clock" class="w-5 h-5 text-blue-600"></i>
+                        <span>Пациенты на наблюдении</span>
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">ФИО</th>
+                                    <th class="p-3">Возраст</th>
+                                    <th class="p-3">Статус</th>
+                                    <th class="p-3">Диагноз</th>
+                                    <th class="p-3 text-right">Действие</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-patients-list" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Вкладка 2: Картотека пациентов -->
+            <section id="tab-patients" class="tab-content hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <div class="relative w-full sm:w-80">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="search-input" onkeyup="filterPatients()" placeholder="Поиск по ФИО или диагнозу..." class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <button onclick="openModal('addPatientModal')" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center space-x-2 text-sm transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Добавить пациента</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">ФИО</th>
+                                    <th class="p-3">Пол / Возраст</th>
+                                    <th class="p-3">Статус</th>
+                                    <th class="p-3">Палата</th>
+                                    <th class="p-3">Диагноз</th>
+                                    <th class="p-3 text-right">Карточка</th>
+                                </tr>
+                            </thead>
+                            <tbody id="patients-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Вкладка 3: Палаты / Стационар -->
+            <section id="tab-ward" class="tab-content hidden space-y-4">
+                <h2 class="text-xl font-bold text-slate-800">Палаты отделения</h2>
+                <div id="wards-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </section>
+
+            <!-- Вкладка 4: Детальная медицинская карта пациента -->
+            <section id="tab-patient-detail" class="tab-content hidden space-y-6">
+                <button onclick="switchTab('patients')" class="inline-flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-800 font-medium no-print">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <span>Назад к списку пациентов</span>
+                </button>
+
+                <!-- Панель информации о пациенте -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <div class="flex items-center space-x-3">
+                            <h1 id="det-name" class="text-2xl font-bold text-slate-900">ФИО Пациента</h1>
+                            <span id="det-status-badge" class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-800">Статус</span>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-1">
+                            Возраст: <span id="det-age" class="font-medium text-slate-700">-</span> | 
+                            Пол: <span id="det-gender" class="font-medium text-slate-700">-</span> | 
+                            Палата: <span id="det-ward" class="font-medium text-slate-700">-</span>
+                        </p>
+                        <p class="text-sm text-slate-700 mt-2"><span class="font-semibold">Основной диагноз:</span> <span id="det-diagnosis">-</span></p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 no-print">
+                        <button onclick="toggleHospitalize()" id="btn-hospitalize" class="px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-lg text-sm font-medium transition flex items-center space-x-1">
+                            <i data-lucide="bed" class="w-4 h-4"></i>
+                            <span id="lbl-hospitalize">Госпитализировать</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Подвкладки карточки -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="flex border-b border-slate-200 bg-slate-50 no-print flex-wrap">
+                        <button onclick="switchPatientSubTab('vitals')" id="subnav-vitals" class="subnav-btn px-5 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600">
+                            Витальные показатели
+                        </button>
+                        <button onclick="switchPatientSubTab('labs')" id="subnav-labs" class="subnav-btn px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+                            Лабораторные анализы
+                        </button>
+                        <button onclick="switchPatientSubTab('prescriptions')" id="subnav-prescriptions" class="subnav-btn px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+                            Назначения & СППР
+                        </button>
+                        <button onclick="switchPatientSubTab('docs')" id="subnav-docs" class="subnav-btn px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+                            Документы и Эпикризы
+                        </button>
+                    </div>
+
+                    <div class="p-6">
+                        <!-- Субвкладка 1: Витальные показатели -->
+                        <div id="subtab-vitals" class="subtab-content space-y-6">
+                            <div class="flex justify-between items-center no-print">
+                                <h3 class="text-base font-bold text-slate-800">Мониторинг состояния</h3>
+                                <button onclick="openModal('addVitalsModal')" class="px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-xs font-medium transition flex items-center space-x-1">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>Внести показатели</span>
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <h4 class="text-xs font-bold text-slate-500 uppercase mb-3">Динамика АД и Сатурации</h4>
+                                    <div class="h-64">
+                                        <canvas id="vitalsChart"></canvas>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <h4 class="text-xs font-bold text-slate-500 uppercase">Журнал измерений</h4>
+                                    <div class="max-h-64 overflow-y-auto border border-slate-200 rounded-lg">
+                                        <table class="w-full text-left text-xs">
+                                            <thead class="bg-slate-100 text-slate-600 sticky top-0">
+                                                <tr>
+                                                    <th class="p-2">Дата/Время</th>
+                                                    <th class="p-2">АД (мм)</th>
+                                                    <th class="p-2">SpO2 (%)</th>
+                                                    <th class="p-2">ЧСС</th>
+                                                    <th class="p-2">Т (°C)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="vitals-table-body" class="divide-y divide-slate-100"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Субвкладка 2: Лабораторные анализы -->
+                        <div id="subtab-labs" class="subtab-content hidden space-y-6">
+                            <div class="flex justify-between items-center no-print">
+                                <h3 class="text-base font-bold text-slate-800">Результаты исследований</h3>
+                                <button onclick="openModal('addLabModal')" class="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs font-medium transition flex items-center space-x-1">
+                                    <i data-lucide="file-plus" class="w-3.5 h-3.5"></i>
+                                    <span>Внести новый анализ</span>
+                                </button>
+                            </div>
+                            <div id="labs-list-container" class="space-y-4"></div>
+                        </div>
+
+                        <!-- Субвкладка 3: Назначения -->
+                        <div id="subtab-prescriptions" class="subtab-content hidden space-y-4">
+                            <div class="flex justify-between items-center no-print">
+                                <h3 class="text-base font-bold text-slate-800">Лист лекарственных назначений</h3>
+                                <button onclick="openAddPrescriptionModal()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-700 transition flex items-center space-x-1">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>Добавить назначение</span>
+                                </button>
+                            </div>
+                            <div class="border border-slate-200 rounded-lg overflow-hidden">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                        <tr>
+                                            <th class="p-3">Препарат</th>
+                                            <th class="p-3">Дозировка</th>
+                                            <th class="p-3">Режим приема</th>
+                                            <th class="p-3">Статус</th>
+                                            <th class="p-3 text-right no-print">Действие</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="prescriptions-table-body" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Субвкладка 4: Сохранение и Редактирование Документации -->
+                        <div id="subtab-docs" class="subtab-content hidden space-y-6">
+                            <div class="flex justify-between items-center no-print border-b pb-3">
+                                <h3 class="text-base font-bold text-slate-800">Медицинская документация и протоколы</h3>
+                                <div class="flex space-x-2">
+                                    <button onclick="createNewDoc('op')" class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-medium transition">
+                                        + Протокол операции
+                                    </button>
+                                    <button onclick="createNewDoc('epicrisis')" class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-medium transition">
+                                        + Выписной эпикриз
+                                    </button>
+                                    <button onclick="createNewDoc('transfer')" class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-medium transition">
+                                        + Переводной эпикриз
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <!-- Список сохраненных документов -->
+                                <div class="lg:col-span-1 border border-slate-200 rounded-xl p-4 bg-slate-50 no-print">
+                                    <h4 class="font-bold text-slate-700 text-xs uppercase mb-3">Сохраненные документы</h4>
+                                    <div id="saved-docs-list" class="space-y-2 max-h-[500px] overflow-y-auto"></div>
+                                </div>
+
+                                <!-- Форма редактирования и просмотр -->
+                                <div class="lg:col-span-2 space-y-4">
+                                    <div id="doc-editor-form" class="hidden bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 no-print">
+                                        <div class="flex justify-between items-center border-b pb-2">
+                                            <h4 id="editor-heading-title" class="font-bold text-slate-700 text-sm">Редактирование документа</h4>
+                                            <span id="editing-doc-id-badge" class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">Новый</span>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-600 mb-1">Название документа</label>
+                                                <input type="text" id="edit-doc-title" oninput="liveUpdateDocPreview()" class="w-full border rounded-lg p-2 text-sm bg-white">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-semibold text-slate-600 mb-1">Врач (Подпись)</label>
+                                                <input type="text" id="edit-doc-doctor" oninput="liveUpdateDocPreview()" class="w-full border rounded-lg p-2 text-sm bg-white">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Диагноз в документе</label>
+                                            <input type="text" id="edit-doc-diagnosis" oninput="liveUpdateDocPreview()" class="w-full border rounded-lg p-2 text-sm bg-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-600 mb-1">Текст протокола / Содержание эпикриза</label>
+                                            <textarea id="edit-doc-body" oninput="liveUpdateDocPreview()" rows="8" class="w-full border rounded-lg p-2 text-sm font-mono bg-white"></textarea>
+                                        </div>
+                                        <div class="flex justify-end space-x-2 pt-2">
+                                            <button onclick="saveCurrentDoc()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition flex items-center space-x-1">
+                                                <i data-lucide="save" class="w-4 h-4"></i>
+                                                <span>Сохранить в карту</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Печатный просмотр -->
+                                    <div id="printable-area" class="border border-slate-300 p-8 rounded-xl bg-white shadow-sm font-serif min-h-[400px]">
+                                        <div id="doc-placeholder" class="text-center text-slate-400 py-12 font-sans">
+                                            <i data-lucide="file-text" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                                            Выберите документ слева или создайте новый для редактирования
+                                        </div>
+                                        <div id="doc-content" class="hidden space-y-4 text-slate-900 text-sm leading-relaxed"></div>
+                                    </div>
+
+                                    <div id="doc-actions" class="hidden flex justify-end space-x-3 no-print">
+                                        <button onclick="window.print()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 transition flex items-center space-x-2">
+                                            <i data-lucide="printer" class="w-4 h-4"></i>
+                                            <span>Распечатать / PDF</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- МОДАЛЬНЫЕ ОКНА -->
+
+    <!-- Модальное окно: Профиль врача -->
+    <div id="editDoctorModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-800">Профиль врача</h3>
+                <button onclick="closeModal('editDoctorModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form onsubmit="saveDoctorProfile(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ФИО Врача</label>
+                    <input type="text" id="doc-name-input" required class="w-full border rounded-lg p-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Специальность</label>
+                    <input type="text" id="doc-spec-input" required class="w-full border rounded-lg p-2 text-sm">
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t">
+                    <button type="button" onclick="closeModal('editDoctorModal')" class="px-4 py-2 border rounded-lg text-sm font-medium">Отмена</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Новый пациент -->
+    <div id="addPatientModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-800">Регистрация пациента</h3>
+                <button onclick="closeModal('addPatientModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form onsubmit="savePatient(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ФИО Пациента</label>
+                    <input type="text" id="m-name" required class="w-full border rounded-lg p-2 text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Возраст</label>
+                        <input type="number" id="m-age" required class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Пол</label>
+                        <select id="m-gender" class="w-full border rounded-lg p-2 text-sm">
+                            <option>Мужской</option>
+                            <option>Женский</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Основной диагноз</label>
+                    <input type="text" id="m-diagnosis" required class="w-full border rounded-lg p-2 text-sm">
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t">
+                    <button type="button" onclick="closeModal('addPatientModal')" class="px-4 py-2 border rounded-lg text-sm font-medium">Отмена</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Внос показателей -->
+    <div id="addVitalsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-800">Внести данные наблюдений</h3>
+                <button onclick="closeModal('addVitalsModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form onsubmit="saveVitals(event)" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">АД верхнее</label>
+                        <input type="number" id="v-sys" required placeholder="120" class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">АД нижнее</label>
+                        <input type="number" id="v-dia" required placeholder="80" class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">SpO2 (%)</label>
+                        <input type="number" id="v-spo2" required placeholder="98" class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Пульс</label>
+                        <input type="number" id="v-hr" required placeholder="72" class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Температура</label>
+                        <input type="number" step="0.1" id="v-temp" required placeholder="36.6" class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t">
+                    <button type="button" onclick="closeModal('addVitalsModal')" class="px-4 py-2 border rounded-lg text-sm font-medium">Отмена</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Добавить анализы -->
+    <div id="addLabModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 space-y-4 my-8">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-800">Внести результаты анализов</h3>
+                <button onclick="closeModal('addLabModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form onsubmit="saveLabResults(event)" class="space-y-4">
+                <div>
+                    <h4 class="text-sm font-bold text-blue-600 border-b pb-1 mb-2">Общий анализ крови (ОАК)</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div><label class="block text-xs text-slate-600 mb-1">Гемоглобин</label><input type="text" id="lab-hb" placeholder="135" class="w-full border rounded p-1.5 text-sm"></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">Эритроциты</label><input type="text" id="lab-rbc" placeholder="4.5" class="w-full border rounded p-1.5 text-sm"></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">Лейкоциты</label><input type="text" id="lab-wbc" placeholder="6.8" class="w-full border rounded p-1.5 text-sm"></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">Тромбоциты</label><input type="text" id="lab-plt" placeholder="230" class="w-full border rounded p-1.5 text-sm"></div>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-indigo-600 border-b pb-1 mb-2">Биохимический анализ</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div><label class="block text-xs text-slate-600 mb-1">Глюкоза</label><input type="text" id="lab-glu" placeholder="4.8" class="w-full border rounded p-1.5 text-sm"></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">Билирубин</label><input type="text" id="lab-bil" placeholder="14.2" class="w-full border rounded p-1.5 text-sm"></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">АЛТ</label><input type="text" id="lab-alt" placeholder="22" class="w-full border rounded p-1.5 text-sm"></div>
+                        <div><label class="block text-xs text-slate-600 mb-1">АСТ</label><input type="text" id="lab-ast" placeholder="19" class="w-full border rounded p-1.5 text-sm"></div>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t">
+                    <button type="button" onclick="closeModal('addLabModal')" class="px-4 py-2 border rounded-lg text-sm font-medium">Отмена</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Добавить назначение с модулем СППР -->
+    <div id="addPrescriptionModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-white rounded-xl shadow-xl max-w-xl w-full p-6 space-y-4 my-6">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-800">Новое лекарственное назначение</h3>
+                <button onclick="closeModal('addPrescriptionModal')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <!-- Умная панель подсказок (СППР) -->
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 space-y-3">
+                <div class="flex items-center space-x-2 text-blue-900 font-bold text-sm">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-blue-600"></i>
+                    <span>Интеллектуальный помощник назначений (СППР)</span>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Симптомы / Доп. проявления (для точного подбора)</label>
+                    <input type="text" id="ai-symptoms-input" oninput="triggerAiRecommendations()" placeholder="Например: лихорадка, боль, тошнота, кашель..." class="w-full border border-blue-200 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 mb-1">Рекомендуемые препараты (на основе диагноза и симптомов):</p>
+                    <div id="ai-recommendations-list" class="flex flex-wrap gap-2 pt-1">
+                        <!-- Динамические чипсы рекомендаций -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Форма ручного ввода/подстановки -->
+            <form onsubmit="savePrescription(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Наименование препарата (МНН / Торговое)</label>
+                    <input type="text" id="p-name" required placeholder="Например: Цефтриаксон" class="w-full border rounded-lg p-2 text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Дозировка</label>
+                        <input type="text" id="p-dosage" required placeholder="Например: 1.0 г в/м" class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Режим приема</label>
+                        <input type="text" id="p-freq" required placeholder="Например: 2 раза в сутки" class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t">
+                    <button type="button" onclick="closeModal('addPrescriptionModal')" class="px-4 py-2 border rounded-lg text-sm font-medium">Отмена</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Назначить препарат</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ЛОГИКА ПРИЛОЖЕНИЯ (JS) -->
+    <script>
+        // База знаний СППР (Автоматические рекомендации препаратов по Диагнозам и Симптомам)
+        const medKnowledgeBase = [
+            { keywords: ['аппендицит', 'живот', 'перитонит'], name: 'Цефтриаксон', dosage: '1.0 г в/м', freq: '2 раза в день' },
+            { keywords: ['аппендицит', 'боль', 'спазм'], name: 'Но-Шпа (Дротаверин)', dosage: '40 мг табл.', freq: 'При боли' },
+            { keywords: ['гипертония', 'давление', 'криз'], name: 'Эналаприл', dosage: '10 мг', freq: '2 раза в день' },
+            { keywords: ['гипертония', 'отек'], name: 'Гипотиазид', dosage: '25 мг', freq: 'Утром' },
+            { keywords: ['пневмония', 'кашель', 'легкие'], name: 'Азитромицин', dosage: '500 мг', freq: '1 раз в день' },
+            { keywords: ['пневмония', 'лихорадка', 'температура'], name: 'Парацетамол', dosage: '500 мг', freq: 'При Т > 38.5°C' },
+            { keywords: ['гастрит', 'изжога', 'желудок'], name: 'Омепразол', dosage: '20 мг', freq: '2 раза в день (до еды)' },
+            { keywords: ['боль', 'воспаление'], name: 'Ибупрофен', dosage: '400 мг', freq: '3 раза в день' }
+        ];
+
+        // Профиль врача
+        let doctorProfile = JSON.parse(localStorage.getItem('med_doctor')) || {
+            name: 'Д-р Иванов А. С.',
+            spec: 'Врач-хирург'
+        };
+
+        // Демо-пациенты
+        const initialPatients = [
+            {
+                id: '1',
+                name: 'Смирнов Михаил Петрович',
+                age: 58,
+                gender: 'Мужской',
+                status: 'Inpatient',
+                ward: 'Палата 302',
+                diagnosis: 'Острый аппендицит',
+                vitals: [
+                    { time: '10:00', sys: 130, dia: 85, spo2: 97, hr: 80, temp: 37.2 },
+                    { time: '14:00', sys: 125, dia: 80, spo2: 98, hr: 75, temp: 36.8 }
+                ],
+                labs: [{ date: new Date().toLocaleDateString('ru-RU'), hb: '142', rbc: '4.7', wbc: '11.2', plt: '240', esr: '18' }],
+                prescriptions: [{ id: '101', name: 'Амоксиклав', dosage: '1.2 г в/в', freq: '3 раза в сутки', active: true }],
+                docs: [
+                    {
+                        id: 'doc-1',
+                        type: 'op',
+                        title: 'ПРОТОКОЛ ОПЕРАТИВНОГО ВМЕШАТЕЛЬСТВА',
+                        doctor: 'Д-р Иванов А. С. (Врач-хирург)',
+                        diagnosis: 'Острый аппендицит',
+                        date: new Date().toLocaleDateString('ru-RU'),
+                        body: 'Под общей анестезией выполнена аппендэктомия. Осложнений нет.'
+                    }
+                ]
+            }
+        ];
+
+        let patients = JSON.parse(localStorage.getItem('med_patients')) || initialPatients;
+        let currentPatientId = null;
+        let currentEditingDocId = null;
+        let chartInstance = null;
+
+        function saveToStorage() {
+            localStorage.setItem('med_patients', JSON.stringify(patients));
+            localStorage.setItem('med_doctor', JSON.stringify(doctorProfile));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            updateDoctorUI();
+            renderDashboard();
+            renderPatientsTable();
+            renderWards();
+        });
+
+        function updateDoctorUI() {
+            document.getElementById('hdr-doctor-name').innerText = doctorProfile.name;
+            document.getElementById('hdr-doctor-spec').innerText = doctorProfile.spec;
+            document.getElementById('doc-name-input').value = doctorProfile.name;
+            document.getElementById('doc-spec-input').value = doctorProfile.spec;
+        }
+
+        function saveDoctorProfile(e) {
+            e.preventDefault();
+            doctorProfile.name = document.getElementById('doc-name-input').value;
+            doctorProfile.spec = document.getElementById('doc-spec-input').value;
+            saveToStorage();
+            updateDoctorUI();
+            closeModal('editDoctorModal');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('text-blue-600', 'bg-blue-50');
+                el.classList.add('text-slate-600');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const navBtn = document.getElementById(`nav-${tabId}`);
+            if (navBtn) navBtn.classList.add('text-blue-600', 'bg-blue-50');
+
+            if (tabId === 'dashboard') renderDashboard();
+            if (tabId === 'patients') renderPatientsTable();
+            if (tabId === 'ward') renderWards();
+        }
+
+        function renderDashboard() {
+            document.getElementById('stat-total').innerText = patients.length;
+            document.getElementById('stat-inpatient').innerText = patients.filter(p => p.status === 'Inpatient').length;
+            document.getElementById('stat-outpatient').innerText = patients.filter(p => p.status === 'Outpatient').length;
+
+            const tbody = document.getElementById('dashboard-patients-list');
+            tbody.innerHTML = patients.slice(0, 5).map(p => `
+                <tr class="hover:bg-slate-50 cursor-pointer" onclick="openPatientDetail('${p.id}')">
+                    <td class="p-3 font-semibold text-slate-800">${p.name}</td>
+                    <td class="p-3 text-slate-600">${p.age} лет</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 text-xs rounded-full ${p.status === 'Inpatient' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'} font-medium">
+                            ${p.status === 'Inpatient' ? 'Стационар' : 'Амбулаторно'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-slate-600">${p.diagnosis}</td>
+                    <td class="p-3 text-right"><button class="text-blue-600 hover:text-blue-800 font-medium text-xs">Открыть →</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPatientsTable(list = patients) {
+            const tbody = document.getElementById('patients-table-body');
+            tbody.innerHTML = list.map(p => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 font-medium text-slate-900">${p.name}</td>
+                    <td class="p-3 text-slate-600">${p.gender}, ${p.age}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 text-xs rounded-full ${p.status === 'Inpatient' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'} font-medium">
+                            ${p.status === 'Inpatient' ? 'Стационар' : 'Амбулаторно'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-slate-600">${p.ward}</td>
+                    <td class="p-3 text-slate-600">${p.diagnosis}</td>
+                    <td class="p-3 text-right">
+                        <button onclick="openPatientDetail('${p.id}')" class="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-semibold">Перейти</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterPatients() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const filtered = patients.filter(p => p.name.toLowerCase().includes(query) || p.diagnosis.toLowerCase().includes(query));
+            renderPatientsTable(filtered);
+        }
+
+        function renderWards() {
+            const grid = document.getElementById('wards-grid');
+            const inpatients = patients.filter(p => p.status === 'Inpatient');
+            if (inpatients.length === 0) {
+                grid.innerHTML = `<div class="col-span-2 text-center text-slate-400 py-8">В стационаре пока нет пациентов</div>`;
+                return;
+            }
+            grid.innerHTML = inpatients.map(p => `
+                <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="font-bold text-slate-800">${p.ward}</span>
+                        <span class="text-xs bg-indigo-50 text-indigo-600 font-semibold px-2 py-0.5 rounded">Госпитализирован</span>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-slate-900">${p.name}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">Диагноз: ${p.diagnosis}</div>
+                    </div>
+                    <div class="pt-2 border-t flex justify-end">
+                        <button onclick="openPatientDetail('${p.id}')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded transition">
+                            Открыть карточку
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openPatientDetail(patientId) {
+            currentPatientId = patientId;
+            const patient = patients.find(p => p.id === patientId);
+            if (!patient) return;
+
+            document.getElementById('det-name').innerText = patient.name;
+            document.getElementById('det-age').innerText = `${patient.age} лет`;
+            document.getElementById('det-gender').innerText = patient.gender;
+            document.getElementById('det-ward').innerText = patient.ward;
+            document.getElementById('det-diagnosis').innerText = patient.diagnosis;
+
+            const badge = document.getElementById('det-status-badge');
+            const btnHosp = document.getElementById('lbl-hospitalize');
+
+            if (patient.status === 'Inpatient') {
+                badge.innerText = 'В стационаре';
+                badge.className = 'px-2.5 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-700';
+                btnHosp.innerText = 'Выписать из стационара';
+            } else {
+                badge.innerText = 'Амбулаторно';
+                badge.className = 'px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700';
+                btnHosp.innerText = 'Госпитализировать';
+            }
+
+            switchTab('patient-detail');
+            switchPatientSubTab('vitals');
+            renderVitals();
+            renderLabs();
+            renderPrescriptions();
+            renderSavedDocsList();
+            resetDocArea();
+        }
+
+        function switchPatientSubTab(subTabId) {
+            document.querySelectorAll('.subtab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.subnav-btn').forEach(el => {
+                el.classList.remove('border-blue-600', 'text-blue-600');
+                el.classList.add('border-transparent', 'text-slate-500');
+            });
+
+            document.getElementById(`subtab-${subTabId}`).classList.remove('hidden');
+            const subNavBtn = document.getElementById(`subnav-${subTabId}`);
+            if (subNavBtn) subNavBtn.classList.add('border-blue-600', 'text-blue-600');
+        }
+
+        function toggleHospitalize() {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+
+            if (patient.status === 'Inpatient') {
+                patient.status = 'Outpatient';
+                patient.ward = '-';
+            } else {
+                patient.status = 'Inpatient';
+                patient.ward = 'Палата ' + (Math.floor(Math.random() * 20) + 101);
+            }
+            saveToStorage();
+            openPatientDetail(currentPatientId);
+        }
+
+        // --- СППР И НАЗНАЧЕНИЯ ---
+        function openAddPrescriptionModal() {
+            openModal('addPrescriptionModal');
+            document.getElementById('ai-symptoms-input').value = '';
+            triggerAiRecommendations();
+        }
+
+        function triggerAiRecommendations() {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+
+            const symptomsQuery = document.getElementById('ai-symptoms-input').value.toLowerCase();
+            const fullContext = (patient.diagnosis + ' ' + symptomsQuery).toLowerCase();
+
+            const matchedMeds = medKnowledgeBase.filter(item => 
+                item.keywords.some(kw => fullContext.includes(kw))
+            );
+
+            const container = document.getElementById('ai-recommendations-list');
+            if (matchedMeds.length === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-400 italic">Нет прямых рекомендаций. Введите дополнительный симптом.</span>`;
+                return;
+            }
+
+            container.innerHTML = matchedMeds.map(m => `
+                <button type="button" onclick="applyAiRecommendation('${m.name}', '${m.dosage}', '${m.freq}')" class="text-xs bg-white border border-blue-300 hover:border-blue-500 hover:bg-blue-100 text-blue-800 font-medium px-2.5 py-1 rounded-lg transition flex items-center space-x-1 shadow-sm">
+                    <i data-lucide="plus-circle" class="w-3 h-3 text-blue-600"></i>
+                    <span>${m.name} (${m.dosage})</span>
+                </button>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function applyAiRecommendation(name, dosage, freq) {
+            document.getElementById('p-name').value = name;
+            document.getElementById('p-dosage').value = dosage;
+            document.getElementById('p-freq').value = freq;
+        }
+
+        function savePrescription(e) {
+            e.preventDefault();
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+
+            if (!patient.prescriptions) patient.prescriptions = [];
+
+            patient.prescriptions.push({
+                id: Date.now().toString(),
+                name: document.getElementById('p-name').value,
+                dosage: document.getElementById('p-dosage').value,
+                freq: document.getElementById('p-freq').value,
+                active: true
+            });
+
+            saveToStorage();
+            closeModal('addPrescriptionModal');
+            renderPrescriptions();
+            e.target.reset();
+        }
+
+        function renderPrescriptions() {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+
+            const tbody = document.getElementById('prescriptions-table-body');
+            tbody.innerHTML = (patient.prescriptions || []).map(p => `
+                <tr>
+                    <td class="p-3 font-medium text-slate-800">${p.name}</td>
+                    <td class="p-3 text-slate-600">${p.dosage}</td>
+                    <td class="p-3 text-slate-600">${p.freq}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 text-xs rounded font-semibold ${p.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
+                            ${p.active ? 'Активно' : 'Отменено'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-right no-print">
+                        <button onclick="togglePrescription('${p.id}')" class="text-xs text-slate-500 hover:text-slate-800 underline">
+                            ${p.active ? 'Завершить' : 'Возобновить'}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function togglePrescription(pId) {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+            const item = patient.prescriptions.find(x => x.id === pId);
+            if (item) item.active = !item.active;
+            saveToStorage();
+            renderPrescriptions();
+        }
+
+        // --- СОХРАНЕНИЕ И РЕДАКТИРОВАНИЕ ДОКУМЕНТАЦИИ ---
+        function renderSavedDocsList() {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+
+            const container = document.getElementById('saved-docs-list');
+            if (!patient.docs || patient.docs.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 italic">Сохраненных документов пока нет.</p>`;
+                return;
+            }
+
+            container.innerHTML = patient.docs.map(doc => `
+                <div onclick="editExistingDoc('${doc.id}')" class="p-3 bg-white border border-slate-200 hover:border-blue-400 rounded-lg cursor-pointer transition shadow-sm group">
+                    <div class="flex justify-between items-start">
+                        <span class="font-bold text-xs text-slate-800 group-hover:text-blue-600">${doc.title}</span>
+                        <span class="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">${doc.date}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-1 line-clamp-1">${doc.body}</p>
+                </div>
+            `).join('');
+        }
+
+        function createNewDoc(type) {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+
+            currentEditingDocId = null; // Новый документ
+            document.getElementById('editing-doc-id-badge').innerText = 'Создание нового';
+            document.getElementById('doc-editor-form').classList.remove('hidden');
+
+            document.getElementById('edit-doc-doctor').value = `${doctorProfile.name} (${doctorProfile.spec})`;
+            document.getElementById('edit-doc-diagnosis').value = patient.diagnosis;
+
+            if (type === 'op') {
+                document.getElementById('edit-doc-title').value = 'ПРОТОКОЛ ОПЕРАТИВНОГО ВМЕШАТЕЛЬСТВА';
+                document.getElementById('edit-doc-body').value = 'Под общей анестезией выполнен хирургический доступ. Ревизия раны без особенностей. Гемостаз полный. Рана ушита послойно.';
+            } else if (type === 'epicrisis') {
+                document.getElementById('edit-doc-title').value = 'ВЫПИСНОЙ ЭПИКРИЗ';
+                document.getElementById('edit-doc-body').value = 'Пациент находился на стационарном лечении. Состояние при выписке удовлетворительное. Рекомендовано амбулаторное наблюдение.';
+            } else if (type === 'transfer') {
+                document.getElementById('edit-doc-title').value = 'ПЕРЕВОДНОЙ ЭПИКРИЗ';
+                document.getElementById('edit-doc-body').value = 'Пациент переводится в отделение реабилитации. Состояние стабильное.';
+            }
+
+            liveUpdateDocPreview();
+        }
+
+        function editExistingDoc(docId) {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient || !patient.docs) return;
+
+            const doc = patient.docs.find(d => d.id === docId);
+            if (!doc) return;
+
+            currentEditingDocId = doc.id;
+            document.getElementById('editing-doc-id-badge').innerText = 'Редактирование ID: ' + doc.id.slice(-4);
+            document.getElementById('doc-editor-form').classList.remove('hidden');
+
+            document.getElementById('edit-doc-title').value = doc.title;
+            document.getElementById('edit-doc-doctor').value = doc.doctor;
+            document.getElementById('edit-doc-diagnosis').value = doc.diagnosis;
+            document.getElementById('edit-doc-body').value = doc.body;
+
+            liveUpdateDocPreview();
+        }
+
+        function liveUpdateDocPreview() {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+
+            const title = document.getElementById('edit-doc-title').value;
+            const docName = document.getElementById('edit-doc-doctor').value;
+            const diag = document.getElementById('edit-doc-diagnosis').value;
+            const body = document.getElementById('edit-doc-body').value;
+
+            document.getElementById('doc-placeholder').classList.add('hidden');
+            const content = document.getElementById('doc-content');
+            const actions = document.getElementById('doc-actions');
+
+            content.classList.remove('hidden');
+            actions.classList.remove('hidden');
+
+            const dateStr = new Date().toLocaleDateString('ru-RU');
+
+            content.innerHTML = `
+                <div class="text-center font-bold text-lg uppercase border-b pb-2 mb-4">${title}</div>
+                <div class="grid grid-cols-2 gap-2 text-xs mb-4">
+                    <p><strong>Дата:</strong> ${dateStr}</p>
+                    <p><strong>Пациент:</strong> ${patient.name}</p>
+                    <p><strong>Возраст/Пол:</strong> ${patient.age} лет, ${patient.gender}</p>
+                    <p><strong>Палата:</strong> ${patient.ward}</p>
+                </div>
+                <p class="mb-3"><strong>Диагноз:</strong> ${diag}</p>
+                <div class="border-t border-b py-3 my-3 whitespace-pre-line leading-relaxed font-sans">${body}</div>
+                <div class="mt-8 flex justify-between items-end pt-4">
+                    <div>
+                        <p class="text-xs text-slate-500">Врач:</p>
+                        <p class="font-bold">${docName}</p>
+                    </div>
+                    <div class="border-b border-slate-400 w-48 text-right text-xs text-slate-400 pb-1">Подпись / Печать</div>
+                </div>
+            `;
+        }
+
+        function saveCurrentDoc() {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+
+            if (!patient.docs) patient.docs = [];
+
+            const docData = {
+                id: currentEditingDocId || ('doc-' + Date.now()),
+                title: document.getElementById('edit-doc-title').value,
+                doctor: document.getElementById('edit-doc-doctor').value,
+                diagnosis: document.getElementById('edit-doc-diagnosis').value,
+                body: document.getElementById('edit-doc-body').value,
+                date: new Date().toLocaleDateString('ru-RU')
+            };
+
+            if (currentEditingDocId) {
+                // Обновляем существующий
+                const idx = patient.docs.findIndex(d => d.id === currentEditingDocId);
+                if (idx !== -1) patient.docs[idx] = docData;
+            } else {
+                // Сохраняем новый
+                patient.docs.push(docData);
+                currentEditingDocId = docData.id;
+            }
+
+            saveToStorage();
+            renderSavedDocsList();
+            alert('Документ успешно сохранен в карту пациента!');
+        }
+
+        function resetDocArea() {
+            document.getElementById('doc-editor-form').classList.add('hidden');
+            document.getElementById('doc-placeholder').classList.remove('hidden');
+            document.getElementById('doc-content').classList.add('hidden');
+            document.getElementById('doc-actions').classList.add('hidden');
+        }
+
+        // Вспомогательные функции
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function savePatient(e) {
+            e.preventDefault();
+            const newP = {
+                id: Date.now().toString(),
+                name: document.getElementById('m-name').value,
+                age: parseInt(document.getElementById('m-age').value),
+                gender: document.getElementById('m-gender').value,
+                status: 'Outpatient',
+                ward: '-',
+                diagnosis: document.getElementById('m-diagnosis').value,
+                vitals: [], labs: [], prescriptions: [], docs: []
+            };
+            patients.push(newP);
+            saveToStorage();
+            closeModal('addPatientModal');
+            renderPatientsTable();
+            renderDashboard();
+            e.target.reset();
+        }
+
+        function saveVitals(e) {
+            e.preventDefault();
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+            const now = new Date();
+            patient.vitals.push({
+                time: `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`,
+                sys: parseInt(document.getElementById('v-sys').value),
+                dia: parseInt(document.getElementById('v-dia').value),
+                spo2: parseInt(document.getElementById('v-spo2').value),
+                hr: parseInt(document.getElementById('v-hr').value),
+                temp: parseFloat(document.getElementById('v-temp').value)
+            });
+            saveToStorage();
+            closeModal('addVitalsModal');
+            renderVitals();
+            e.target.reset();
+        }
+
+        function saveLabResults(e) {
+            e.preventDefault();
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+            if (!patient.labs) patient.labs = [];
+            patient.labs.push({
+                date: new Date().toLocaleDateString('ru-RU'),
+                hb: document.getElementById('lab-hb').value,
+                rbc: document.getElementById('lab-rbc').value,
+                wbc: document.getElementById('lab-wbc').value,
+                plt: document.getElementById('lab-plt').value,
+                glu: document.getElementById('lab-glu').value,
+                bil: document.getElementById('lab-bil').value,
+                alt: document.getElementById('lab-alt').value,
+                ast: document.getElementById('lab-ast').value
+            });
+            saveToStorage();
+            closeModal('addLabModal');
+            renderLabs();
+            e.target.reset();
+        }
+
+        function renderVitals() {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+
+            const tbody = document.getElementById('vitals-table-body');
+            tbody.innerHTML = (patient.vitals || []).map(v => `
+                <tr>
+                    <td class="p-2 text-slate-500">${v.time}</td>
+                    <td class="p-2 font-medium">${v.sys}/${v.dia}</td>
+                    <td class="p-2 ${v.spo2 < 95 ? 'text-red-600 font-bold' : ''}">${v.spo2}%</td>
+                    <td class="p-2">${v.hr}</td>
+                    <td class="p-2 ${v.temp > 37.0 ? 'text-amber-600 font-bold' : ''}">${v.temp}</td>
+                </tr>
+            `).reverse().join('');
+
+            const ctx = document.getElementById('vitalsChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: (patient.vitals || []).map(v => v.time),
+                    datasets: [
+                        { label: 'АД Систолическое', data: (patient.vitals || []).map(v => v.sys), borderColor: '#3b82f6', tension: 0.2 },
+                        { label: 'SpO2 (%)', data: (patient.vitals || []).map(v => v.spo2), borderColor: '#10b981', tension: 0.2 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function renderLabs() {
+            const patient = patients.find(p => p.id === currentPatientId);
+            if (!patient) return;
+            const container = document.getElementById('labs-list-container');
+            if (!patient.labs || patient.labs.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-400 py-6">Результаты анализов не вносились</div>`;
+                return;
+            }
+            container.innerHTML = patient.labs.map(lab => `
+                <div class="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-2 text-xs">
+                    <div class="font-bold border-b pb-1 text-slate-800">Дата анализа: ${lab.date}</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><strong>ОАК:</strong> Hb: ${lab.hb || '-'}, Лейк: ${lab.wbc || '-'}</div>
+                        <div><strong>Биохимия:</strong> Глюкоза: ${lab.glu || '-'}, Билирубин: ${lab.bil || '-'}</div>
+                    </div>
+                </div>
+            `).reverse().join('');
+        }
+    </script>
+</body>
+</html>
